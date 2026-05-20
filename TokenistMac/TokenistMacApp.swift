@@ -36,10 +36,27 @@ private struct MenuBarLabel: View {
         if snapshot.fetchedAt == .distantPast {
             Image(systemName: "gauge.medium")
         } else {
-            HStack(spacing: 3) {
-                Image(systemName: "gauge.medium")
+            HStack(spacing: 4) {
+                MenuBarProgress(percent: snapshot.sessionPct)
+                    .frame(width: 42, height: 8)
                 Text("\(Int(snapshot.sessionPct.rounded()))%")
                     .monospacedDigit()
+            }
+        }
+    }
+}
+
+private struct MenuBarProgress: View {
+    let percent: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .stroke(.primary.opacity(0.4), lineWidth: 1)
+                Capsule()
+                    .fill(.primary)
+                    .frame(width: proxy.size.width * CGFloat(min(1, max(0, percent / 100))))
             }
         }
     }
