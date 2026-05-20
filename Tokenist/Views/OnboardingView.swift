@@ -17,85 +17,83 @@ struct OnboardingView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    TextField("sk-ant-sid01-…", text: $cookie, axis: .vertical)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .lineLimit(3...6)
-                        .focused($cookieFocused)
-                        .font(.system(.callout, design: .monospaced))
-                } header: {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Reads your Claude usage from claude.ai. Paste your session cookie to get started.")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .textCase(nil)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    Text("Reads your Claude usage from claude.ai. Paste your session cookie to get started.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Session cookie")
-                    }
-                    .padding(.bottom, 4)
-                } footer: {
-                    Link(destination: Self.cookieHelpURL) {
-                        HStack(spacing: 4) {
-                            Text("How to find your sessionKey")
-                            Image(systemName: "arrow.up.right")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        TextField("sk-ant-sid01-…", text: $cookie, axis: .vertical)
+                            .textFieldStyle(.roundedBorder)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .lineLimit(3...6)
+                            .focused($cookieFocused)
+                            .font(.system(.callout, design: .monospaced))
+                        Link(destination: Self.cookieHelpURL) {
+                            HStack(spacing: 4) {
+                                Text("How to find your sessionKey")
+                                Image(systemName: "arrow.up.right")
+                            }
+                            .font(.footnote)
                         }
                     }
-                }
 
-                Section {
                     Button {
                         Task { await fetchOrgs() }
                     } label: {
-                        HStack {
-                            Spacer()
-                            if status == .loading {
-                                ProgressView()
-                            } else {
-                                Text("Validate cookie").fontWeight(.semibold)
-                            }
-                            Spacer()
+                        if status == .loading {
+                            ProgressView()
+                        } else {
+                            Text("Validate cookie")
                         }
                     }
-                    .disabled(cookie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                              || status == .loading)
-                }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .frame(maxWidth: .infinity)
+                    .disabled(cookie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || status == .loading)
 
-                if !orgs.isEmpty {
-                    Section("Organization") {
-                        Picker("Account", selection: Binding(
-                            get: { selectedOrgId ?? "" },
-                            set: { selectedOrgId = $0.isEmpty ? nil : $0 }
-                        )) {
-                            ForEach(orgs) { org in
-                                Text(org.name).tag(org.uuid)
+                    if !orgs.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Organization")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Picker("Account", selection: Binding(
+                                get: { selectedOrgId ?? "" },
+                                set: { selectedOrgId = $0.isEmpty ? nil : $0 }
+                            )) {
+                                ForEach(orgs) { org in
+                                    Text(org.name).tag(org.uuid)
+                                }
                             }
+                            .pickerStyle(.menu)
                         }
-                        .pickerStyle(.menu)
-                    }
 
-                    Section {
-                        Button {
+                        Button("Save & Continue") {
                             save()
-                        } label: {
-                            HStack {
-                                Spacer()
-                                Text("Save & Continue").fontWeight(.semibold)
-                                Spacer()
-                            }
                         }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .frame(maxWidth: .infinity)
                         .disabled(selectedOrgId == nil)
                     }
-                }
 
-                if case .error(let msg) = status {
-                    Section {
+                    if case .error(let msg) = status {
                         Label(msg, systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.red)
+                            .font(.footnote)
                     }
+
+                    Spacer(minLength: 0)
                 }
+                .padding()
             }
             .navigationTitle("Tokenist")
+            .scrollDismissesKeyboard(.interactively)
             .onAppear { cookieFocused = true }
         }
     }
