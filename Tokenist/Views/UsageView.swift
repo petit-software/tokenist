@@ -101,9 +101,13 @@ struct UsageView: View {
                             Label("Threshold alerts (75 / 90 / 95%)", systemImage: "bell")
                         }
                         Divider()
-                        Button("Sign out", role: .destructive) { session.signOut() }
+                        Button(role: .destructive) {
+                            session.signOut()
+                        } label: {
+                            Label("Sign out", systemImage: "key.horizontal")
+                        }
                     } label: {
-                        Image(systemName: "key.horizontal")
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }

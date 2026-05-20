@@ -16,58 +16,75 @@ struct OnboardingView: View {
         case loaded
     }
 
+    private static let cookieHelpURL = URL(string: "https://github.com/petit-software/tokenist#3-get-your-claude-session-cookie")!
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    Text("Tokenist reads your Claude usage from claude.ai. Paste your session cookie below to get started.")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    Text("Reads your Claude usage from claude.ai. Paste your session cookie to get started.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                } header: {
-                    Text("Connect to Claude")
-                }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                Section {
-                    TextField("sk-ant-sid01-…", text: $cookie, axis: .vertical)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .lineLimit(3...6)
-                        .focused($cookieFocused)
-                        .font(.system(.body, design: .monospaced))
-                } header: {
-                    Text("Session cookie")
-                } footer: {
-                    Text("In a browser logged into claude.ai: DevTools → Application → Cookies → sessionKey. Copy the value here.")
-                }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Session cookie")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("sk-ant-sid01-…", text: $cookie, axis: .vertical)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .lineLimit(3...6)
+                            .focused($cookieFocused)
+                            .font(.system(.body, design: .monospaced))
+                            .padding(12)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
 
-                Section {
+                        Link(destination: Self.cookieHelpURL) {
+                            HStack(spacing: 4) {
+                                Text("How to find your sessionKey")
+                                Image(systemName: "arrow.up.right")
+                            }
+                            .font(.caption)
+                        }
+                    }
+
                     Button {
                         Task { await fetchOrgs() }
                     } label: {
-                        if case .loading = status {
-                            ProgressView()
-                        } else {
-                            Text("Validate cookie")
-                        }
-                    }
-                    .disabled(cookie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || status == .loading)
-                }
-
-                if !orgs.isEmpty {
-                    Section("Organization") {
-                        Picker("Account", selection: Binding(
-                            get: { selectedOrgId ?? "" },
-                            set: { selectedOrgId = $0.isEmpty ? nil : $0 }
-                        )) {
-                            ForEach(orgs) { org in
-                                Text(org.name).tag(org.uuid)
+                        Group {
+                            if case .loading = status {
+                                ProgressView()
+                            } else {
+                                Text("Validate cookie")
                             }
                         }
-                        .pickerStyle(.inline)
-                        .labelsHidden()
+                        .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(cookie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || status == .loading)
 
-                    Section {
+                    if !orgs.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Organization")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Picker("", selection: Binding(
+                                get: { selectedOrgId ?? "" },
+                                set: { selectedOrgId = $0.isEmpty ? nil : $0 }
+                            )) {
+                                ForEach(orgs) { org in
+                                    Text(org.name).tag(org.uuid)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        }
+
                         Button {
                             save()
                         } label: {
@@ -75,16 +92,18 @@ struct OnboardingView: View {
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
                         .disabled(selectedOrgId == nil)
                     }
-                }
 
-                if case .error(let msg) = status {
-                    Section {
+                    if case .error(let msg) = status {
                         Label(msg, systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.red)
+                            .font(.caption)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .padding()
             }
             .navigationTitle("Tokenist")
             .onAppear { cookieFocused = true }

@@ -57,6 +57,7 @@ targets:
       - path: TokenistMac
       - path: Tokenist/Models
       - path: Tokenist/Services
+      - path: Tokenist/Assets.xcassets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bartbak.tokenist.mac
