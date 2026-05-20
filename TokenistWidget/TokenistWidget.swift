@@ -1,0 +1,246 @@
+import WidgetKit
+import SwiftUI
+
+private struct SendableBox<T>: @unchecked Sendable {
+    let value: T
+    init(_ value: T) { self.value = value }
+}
+
+@main
+struct TokenistWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        TokenistWidget()
+    }
+}
+
+struct TokenistWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "TokenistWidget", provider: TokenistTimelineProvider()) { entry in
+            TokenistWidgetView(entry: entry)
+                .containerBackground(.fill.tertiary, for: .widget)
+        }
+        .configurationDisplayName("Tokenist")
+        .description("Claude usage at a glance.")
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular, .systemSmall])
+    }
+}
+
+struct TokenistEntry: TimelineEntry {
+    let date: Date
+    let snapshot: UsageSnapshot
+    let needsSetup: Bool
+    let errorMessage: String?
+}
+
+struct TokenistTimelineProvider: TimelineProvider {
+    func placeholder(in context: Context) -> TokenistEntry {
+        TokenistEntry(date: Date(), snapshot: .empty, needsSetup: false, errorMessage: nil)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (TokenistEntry) -> Void) {
+        let sample = UsageSnapshot(
+            sessionPct: 42,
+            sessionResetsAt: Date().addingTimeInterval(60 * 60 * 2),
+            weeklyPct: 23,
+            weeklyResetsAt: Date().addingTimeInterval(60 * 60 * 24 * 3),
+            opusWeeklyPct: nil,
+            sonnetWeeklyPct: 10,
+            extraSpending: nil,
+            extraBudget: nil,
+            extraCurrency: nil,
+            extraEnabled: false,
+            fetchedAt: Date()
+        )
+        completion(TokenistEntry(date: Date(), snapshot: sample, needsSetup: false, errorMessage: nil))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<TokenistEntry>) -> Void) {
+        let box = SendableBox(completion)
+        Task {
+            let entry = await fetchEntry()
+            let nextRefresh = Date().addingTimeInterval(30 * 60)
+            box.value(Timeline(entries: [entry], policy: .after(nextRefresh)))
+        }
+    }
+
+    private func fetchEntry() async -> TokenistEntry {
+        guard let key = KeychainStore.loadSessionKey(),
+              let orgId = SharedDefaults.orgId,
+              !orgId.isEmpty else {
+            return TokenistEntry(date: Date(), snapshot: .empty, needsSetup: true, errorMessage: nil)
+        }
+        do {
+            let client = ClaudeAPIClient(sessionKey: key)
+            let response = try await client.fetchUsage(orgId: orgId)
+            return TokenistEntry(
+                date: Date(),
+                snapshot: UsageSnapshot(from: response),
+                needsSetup: false,
+                errorMessage: nil
+            )
+        } catch {
+            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            return TokenistEntry(date: Date(), snapshot: .empty, needsSetup: false, errorMessage: message)
+        }
+    }
+}
+
+// MARK: - Widget views
+
+struct TokenistWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: TokenistEntry
+
+    var body: some View {
+        switch family {
+        case .accessoryCircular:
+            CircularView(entry: entry)
+        case .accessoryRectangular:
+            RectangularView(entry: entry)
+        case .systemSmall:
+            SmallView(entry: entry)
+        default:
+            Text("Unsupported").font(.caption)
+        }
+    }
+}
+
+private struct SmallView: View {
+    let entry: TokenistEntry
+
+    var body: some View {
+        if entry.needsSetup {
+            VStack(alignment: .leading, spacing: 4) {
+                Image(systemName: "person.crop.circle.badge.questionmark")
+                    .font(.title2)
+                Text("Open Tokenist to sign in")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("\(Int(entry.snapshot.sessionPct.rounded()))")
+                        .font(.system(size: 38, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText(value: entry.snapshot.sessionPct))
+                    Text("%")
+                        .font(.headline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+                bar(percent: entry.snapshot.sessionPct, label: "session")
+                bar(percent: entry.snapshot.weeklyPct, label: "weekly")
+                if let reset = entry.snapshot.sessionResetsAt {
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock")
+                            .font(.caption2)
+                        Text(reset, style: .timer)
+                            .font(.caption2.monospacedDigit())
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    @ViewBuilder
+    private func bar(percent: Double, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(label).font(.caption2).foregroundStyle(.secondary)
+                Spacer()
+                Text("\(Int(percent.rounded()))%")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3).fill(.gray.opacity(0.2))
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(tint(percent))
+                        .frame(width: proxy.size.width * CGFloat(min(1, max(0, percent / 100))))
+                }
+            }
+            .frame(height: 5)
+        }
+    }
+
+    private func tint(_ pct: Double) -> Color {
+        switch pct {
+        case ..<50: .green
+        case ..<75: .yellow
+        case ..<90: .orange
+        default: .red
+        }
+    }
+}
+
+private struct CircularView: View {
+    let entry: TokenistEntry
+
+    var body: some View {
+        if entry.needsSetup {
+            Image(systemName: "person.crop.circle.badge.questionmark")
+        } else {
+            Gauge(value: min(1, max(0, entry.snapshot.sessionPct / 100))) {
+                Text("Sess")
+            } currentValueLabel: {
+                Text("\(Int(entry.snapshot.sessionPct.rounded()))")
+                    .font(.system(.headline, design: .rounded))
+            }
+            .gaugeStyle(.accessoryCircular)
+        }
+    }
+}
+
+private struct RectangularView: View {
+    let entry: TokenistEntry
+
+    var body: some View {
+        if entry.needsSetup {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tokenist").font(.headline)
+                Text("Open the app to sign in").font(.caption2)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock")
+                    Text("\(Int(entry.snapshot.sessionPct.rounded()))% session")
+                        .font(.headline.monospacedDigit())
+                }
+                if let reset = entry.snapshot.sessionResetsAt {
+                    Text("resets \(reset, style: .relative)")
+                        .font(.caption2)
+                }
+                Text("\(Int(entry.snapshot.weeklyPct.rounded()))% weekly")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+#Preview(as: .accessoryCircular) {
+    TokenistWidget()
+} timeline: {
+    TokenistEntry(
+        date: .now,
+        snapshot: UsageSnapshot(
+            sessionPct: 42,
+            sessionResetsAt: .now.addingTimeInterval(7000),
+            weeklyPct: 23,
+            weeklyResetsAt: .now.addingTimeInterval(86400 * 3),
+            opusWeeklyPct: nil,
+            sonnetWeeklyPct: 10,
+            extraSpending: nil,
+            extraBudget: nil,
+            extraCurrency: nil,
+            extraEnabled: false,
+            fetchedAt: .now
+        ),
+        needsSetup: false,
+        errorMessage: nil
+    )
+}
