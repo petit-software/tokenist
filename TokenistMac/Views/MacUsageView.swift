@@ -86,7 +86,7 @@ struct MacUsageView: View {
                         NSApplication.shared.terminate(nil)
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()

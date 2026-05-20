@@ -107,7 +107,7 @@ struct UsageView: View {
                             Label("Sign out", systemImage: "key.horizontal")
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: "ellipsis")
                     }
                 }
             }
