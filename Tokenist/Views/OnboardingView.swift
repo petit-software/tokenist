@@ -19,14 +19,6 @@ struct OnboardingView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Reads your Claude usage from claude.ai. Paste your session cookie to get started.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 16, trailing: 0))
-                }
-
-                Section {
                     TextField("sk-ant-sid01-…", text: $cookie, axis: .vertical)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
@@ -34,7 +26,14 @@ struct OnboardingView: View {
                         .focused($cookieFocused)
                         .font(.system(.callout, design: .monospaced))
                 } header: {
-                    Text("Session cookie")
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Reads your Claude usage from claude.ai. Paste your session cookie to get started.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .textCase(nil)
+                        Text("Session cookie")
+                    }
+                    .padding(.bottom, 4)
                 } footer: {
                     Link(destination: Self.cookieHelpURL) {
                         HStack(spacing: 4) {
