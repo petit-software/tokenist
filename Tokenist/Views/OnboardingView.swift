@@ -2,7 +2,6 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Environment(SessionStore.self) private var session
-    @Environment(\.colorScheme) private var colorScheme
 
     @State private var cookie: String = ""
     @State private var orgs: [Organization] = []
@@ -11,26 +10,23 @@ struct OnboardingView: View {
     @FocusState private var cookieFocused: Bool
 
     enum Status: Equatable {
-        case idle
-        case loading
-        case error(String)
-        case loaded
+        case idle, loading, error(String), loaded
     }
 
     private static let cookieHelpURL = URL(string: "https://github.com/petit-software/tokenist#3-get-your-claude-session-cookie")!
 
     var body: some View {
         ZStack {
-            AtmosphericBackground()
+            backgroundTint
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 26) {
+                VStack(alignment: .leading, spacing: 24) {
                     header
 
-                    cookieField
+                    cookieGroup
 
                     primaryButton(
-                        label: "Validate cookie",
+                        title: "Validate cookie",
                         isLoading: status == .loading,
                         isDisabled: cookie.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             || status == .loading
@@ -39,9 +35,10 @@ struct OnboardingView: View {
                     }
 
                     if !orgs.isEmpty {
-                        orgPicker
+                        orgGroup
+
                         primaryButton(
-                            label: "Save & Continue",
+                            title: "Save & Continue",
                             isLoading: false,
                             isDisabled: selectedOrgId == nil
                         ) {
@@ -52,11 +49,9 @@ struct OnboardingView: View {
                     if case .error(let msg) = status {
                         errorBanner(msg)
                     }
-
-                    Spacer(minLength: 8)
                 }
                 .padding(.horizontal, 22)
-                .padding(.top, 32)
+                .padding(.top, 24)
                 .padding(.bottom, 32)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -70,19 +65,19 @@ struct OnboardingView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Tokenist")
-                .font(.system(size: 40, weight: .bold))
-                .tracking(-0.6)
+                .font(.system(size: 38, weight: .bold))
             Text("Reads your Claude usage from claude.ai. Paste your session cookie to get started.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private var cookieField: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private var cookieGroup: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Session cookie")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
 
             TextField("sk-ant-sid01-…", text: $cookie, axis: .vertical)
                 .textInputAutocapitalization(.never)
@@ -90,31 +85,28 @@ struct OnboardingView: View {
                 .lineLimit(3...6)
                 .focused($cookieFocused)
                 .font(.system(.callout, design: .monospaced))
-                .padding(16)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(glassSurface(cornerRadius: 22))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(highlightStroke, lineWidth: 0.6)
-                )
-                .shadow(color: .black.opacity(0.07), radius: 18, y: 8)
+                .glassEffect(.regular, in: .rect(cornerRadius: 22))
 
             Link(destination: Self.cookieHelpURL) {
                 HStack(spacing: 4) {
                     Text("How to find your sessionKey")
                     Image(systemName: "arrow.up.right")
-                        .font(.footnote.weight(.semibold))
                 }
                 .font(.footnote.weight(.medium))
             }
+            .padding(.horizontal, 4)
         }
     }
 
-    private var orgPicker: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private var orgGroup: some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Organization")
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
 
             Menu {
                 Picker("", selection: Binding(
@@ -135,20 +127,15 @@ struct OnboardingView: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.vertical, 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(glassSurface(cornerRadius: 22))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(highlightStroke, lineWidth: 0.6)
-                )
-                .shadow(color: .black.opacity(0.07), radius: 18, y: 8)
+                .glassEffect(.regular, in: .rect(cornerRadius: 22))
             }
         }
     }
 
     private func primaryButton(
-        label: String,
+        title: String,
         isLoading: Bool,
         isDisabled: Bool,
         action: @escaping () -> Void
@@ -157,39 +144,18 @@ struct OnboardingView: View {
             ZStack {
                 if isLoading {
                     ProgressView()
-                        .tint(.white)
                 } else {
-                    Text(label)
+                    Text(title)
                         .font(.body.weight(.semibold))
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 26)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: isDisabled
-                                ? [Color.gray.opacity(0.45), Color.gray.opacity(0.35)]
-                                : [Color(red: 0.36, green: 0.58, blue: 0.96),
-                                   Color(red: 0.25, green: 0.45, blue: 0.92)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.6)
-            )
-            .foregroundStyle(.white)
-            .shadow(
-                color: isDisabled ? .clear : Color(red: 0.25, green: 0.45, blue: 0.92).opacity(0.32),
-                radius: 18, y: 8
-            )
+            .frame(maxWidth: .infinity, minHeight: 28)
+            .padding(.vertical, 14)
         }
+        .buttonStyle(.glassProminent)
+        .controlSize(.large)
+        .tint(Color(red: 0.27, green: 0.50, blue: 0.95))
         .disabled(isDisabled)
-        .animation(.easeOut(duration: 0.18), value: isDisabled)
     }
 
     private func errorBanner(_ message: String) -> some View {
@@ -198,28 +164,40 @@ struct OnboardingView: View {
                 .foregroundStyle(.red)
             Text(message)
                 .font(.footnote)
-                .foregroundStyle(.primary)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(.red.opacity(0.25), lineWidth: 0.6)
+        .glassEffect(.regular.tint(.red.opacity(0.15)), in: .rect(cornerRadius: 18))
+    }
+
+    // MARK: - Background
+
+    private var backgroundTint: some View {
+        LinearGradient(
+            colors: [
+                Color(red: 0.85, green: 0.92, blue: 1.0),
+                Color(red: 0.95, green: 0.97, blue: 1.0)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
         )
-    }
-
-    // MARK: - Styling helpers
-
-    private func glassSurface(cornerRadius: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(.regularMaterial)
-    }
-
-    private var highlightStroke: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.12)
-            : Color.white.opacity(0.6)
+        .ignoresSafeArea()
+        .overlay(alignment: .top) {
+            Circle()
+                .fill(Color(red: 0.40, green: 0.62, blue: 0.96).opacity(0.45))
+                .frame(width: 360, height: 360)
+                .blur(radius: 110)
+                .offset(x: -110, y: -180)
+                .ignoresSafeArea()
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Circle()
+                .fill(Color(red: 0.55, green: 0.72, blue: 0.97).opacity(0.35))
+                .frame(width: 320, height: 320)
+                .blur(radius: 130)
+                .offset(x: 130, y: 280)
+                .ignoresSafeArea()
+        }
     }
 
     private var currentOrgName: String {
@@ -255,44 +233,5 @@ struct OnboardingView: View {
         } catch {
             status = .error("Could not save to Keychain: \(error.localizedDescription)")
         }
-    }
-}
-
-// MARK: - Atmospheric background
-
-private struct AtmosphericBackground: View {
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: colorScheme == .dark
-                    ? [
-                        Color(red: 0.05, green: 0.08, blue: 0.16),
-                        Color(red: 0.07, green: 0.12, blue: 0.22)
-                      ]
-                    : [
-                        Color(red: 0.92, green: 0.95, blue: 1.0),
-                        Color(red: 0.97, green: 0.98, blue: 1.0)
-                      ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            // Soft blue glow upper-left
-            Circle()
-                .fill(Color(red: 0.40, green: 0.62, blue: 0.96).opacity(colorScheme == .dark ? 0.35 : 0.55))
-                .frame(width: 420, height: 420)
-                .blur(radius: 120)
-                .offset(x: -120, y: -240)
-
-            // Cooler glow lower-right
-            Circle()
-                .fill(Color(red: 0.62, green: 0.78, blue: 0.98).opacity(colorScheme == .dark ? 0.25 : 0.50))
-                .frame(width: 360, height: 360)
-                .blur(radius: 140)
-                .offset(x: 140, y: 320)
-        }
-        .ignoresSafeArea()
     }
 }
