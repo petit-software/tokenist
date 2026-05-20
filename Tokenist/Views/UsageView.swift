@@ -34,6 +34,7 @@ struct UsageView: View {
     @Environment(SessionStore.self) private var session
     @State private var model: UsageViewModel
     @State private var ticker = Date()
+    @AppStorage("notif.enabled") private var notificationsEnabled = false
 
     init(orgId: String) {
         self.orgId = orgId
@@ -96,6 +97,10 @@ struct UsageView: View {
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
+                        Toggle(isOn: $notificationsEnabled) {
+                            Label("Threshold alerts (75 / 90 / 95%)", systemImage: "bell")
+                        }
+                        Divider()
                         Button("Sign out", role: .destructive) { session.signOut() }
                     } label: {
                         Image(systemName: "key.horizontal")
@@ -107,6 +112,11 @@ struct UsageView: View {
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
                 ticker = date
             }
+            .onChange(of: notificationsEnabled) { _, newValue in
+                if newValue {
+                    Task { _ = await NotificationManager.shared.requestAuthorization() }
+                }
+            }
         }
     }
 
@@ -116,6 +126,7 @@ struct UsageView: View {
             return
         }
         await model.refresh(sessionKey: key)
+        await NotificationManager.shared.evaluate(model.snapshot)
     }
 
     private func resetText(_ resetsAt: Date?) -> String? {

@@ -44,6 +44,7 @@ final class MacDataStore {
             let response = try await client.fetchUsage(orgId: orgId)
             snapshot = UsageSnapshot(from: response)
             lastError = nil
+            await NotificationManager.shared.evaluate(snapshot)
         } catch {
             lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }

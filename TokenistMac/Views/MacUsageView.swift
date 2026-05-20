@@ -5,6 +5,7 @@ struct MacUsageView: View {
     @Environment(SessionStore.self) private var session
     @Environment(MacDataStore.self) private var dataStore
     @State private var ticker = Date()
+    @AppStorage("notif.enabled") private var notificationsEnabled = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -71,6 +72,10 @@ struct MacUsageView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Menu {
+                    Toggle(isOn: $notificationsEnabled) {
+                        Label("Threshold alerts (75 / 90 / 95%)", systemImage: "bell")
+                    }
+                    Divider()
                     Button("Sign out", role: .destructive) { session.signOut() }
                     Divider()
                     Button("Quit Tokenist") {
@@ -86,6 +91,11 @@ struct MacUsageView: View {
         .padding(14)
         .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { date in
             ticker = date
+        }
+        .onChange(of: notificationsEnabled) { _, newValue in
+            if newValue {
+                Task { _ = await NotificationManager.shared.requestAuthorization() }
+            }
         }
     }
 
