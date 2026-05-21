@@ -19,21 +19,28 @@ struct OnboardingView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("sk-ant-sid01-…", text: $cookie, axis: .vertical)
+                    VStack(spacing: 12) {
+                        AppIconView()
+                        VStack(spacing: 4) {
+                            Text("Tokenist")
+                                .font(.largeTitle.weight(.bold))
+                            Text("Read your Claude usage")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+
+                Section {
+                    TextField("Session cookie: sk-ant-sid01-…", text: $cookie, axis: .vertical)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .lineLimit(3...6)
                         .focused($cookieFocused)
                         .font(.system(.body, design: .monospaced))
-                } header: {
-                    Text("Session cookie")
-                } footer: {
-                    Link(destination: Self.cookieHelpURL) {
-                        HStack(spacing: 4) {
-                            Text("How to find your sessionKey")
-                            Image(systemName: "arrow.up.right")
-                        }
-                    }
                 }
 
                 Section {
@@ -56,12 +63,19 @@ struct OnboardingView: View {
 
                 if !orgs.isEmpty {
                     Section {
-                        Picker("Account", selection: Binding(
-                            get: { selectedOrgId ?? "" },
-                            set: { selectedOrgId = $0.isEmpty ? nil : $0 }
-                        )) {
-                            ForEach(orgs) { org in
-                                Text(org.name).tag(org.uuid)
+                        ForEach(orgs) { org in
+                            Button {
+                                selectedOrgId = org.uuid
+                            } label: {
+                                HStack {
+                                    Text(org.name)
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    if selectedOrgId == org.uuid {
+                                        Image(systemName: "checkmark")
+                                            .foregroundStyle(.tint)
+                                    }
+                                }
                             }
                         }
                     } header: {
@@ -75,7 +89,6 @@ struct OnboardingView: View {
                             HStack {
                                 Spacer()
                                 Text("Save & Continue")
-                                    .fontWeight(.semibold)
                                 Spacer()
                             }
                         }
@@ -90,8 +103,13 @@ struct OnboardingView: View {
                     }
                 }
             }
-            .navigationTitle("Tokenist")
-            .navigationSubtitle("Reads your Claude usage from claude.ai")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Link(destination: Self.cookieHelpURL) {
+                        Label("How to find your session key", systemImage: "questionmark.circle")
+                    }
+                }
+            }
             .onAppear { cookieFocused = true }
         }
     }
@@ -120,5 +138,29 @@ struct OnboardingView: View {
         } catch {
             status = .error("Could not save to Keychain: \(error.localizedDescription)")
         }
+    }
+}
+
+private struct AppIconView: View {
+    var body: some View {
+        if let image = Self.bundleIcon {
+            Image(uiImage: image)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 96, height: 96)
+                .clipShape(.rect(cornerRadius: 22, style: .continuous))
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+                .padding(.vertical, 12)
+        }
+    }
+
+    private static var bundleIcon: UIImage? {
+        guard
+            let icons = Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons") as? [String: Any],
+            let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
+            let files = primary["CFBundleIconFiles"] as? [String],
+            let lastName = files.last
+        else { return nil }
+        return UIImage(named: lastName)
     }
 }
