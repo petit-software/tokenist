@@ -1,4 +1,9 @@
+<img width="512" height="512" alt="image" src="https://github.com/user-attachments/assets/9cc75aa8-922f-4e4a-9887-7f99b5152f8f" />
+
 # Tokenist
+
+<img width="6340" height="3736" alt="image" src="https://github.com/user-attachments/assets/7f4ea00d-5edb-4ec7-8fb0-588a941534c9" />
+
 
 iOS + macOS app that shows your Claude.ai usage at a glance — 5-hour session %, weekly %, Opus/Sonnet weekly, extra spending. Includes a Lock Screen widget, Home Screen widget, and a Mac menu-bar tray app.
 
