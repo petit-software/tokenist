@@ -204,7 +204,6 @@ private struct UsageBar: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("\(Int(percent.rounded()))")
                     .font(.system(size: 56, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
                     .contentTransition(.numericText(value: percent))
                     .animation(.smooth(duration: 0.6), value: percent)
                 Text("%")
