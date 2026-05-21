@@ -233,9 +233,17 @@ private struct MiniBar: View {
                     .fill(.primary.opacity(0.25))
                 Capsule()
                     .fill(.primary)
-                    .frame(width: proxy.size.width * CGFloat(min(1, max(0, percent / 100))))
+                    .frame(width: fillWidth(in: proxy.size))
             }
         }
+    }
+
+    private func fillWidth(in size: CGSize) -> CGFloat {
+        let fraction = CGFloat(min(1, max(0, percent / 100)))
+        guard fraction > 0 else { return 0 }
+        // Keep the fill at least as wide as it is tall so the leading
+        // edge stays horizontally rounded instead of flipping vertical.
+        return max(size.height, size.width * fraction)
     }
 }
 
