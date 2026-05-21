@@ -22,6 +22,7 @@ struct TokenistWidget: Widget {
         .configurationDisplayName("Tokenist")
         .description("Claude usage at a glance.")
         .supportedFamilies([.accessoryCircular, .accessoryRectangular, .systemSmall])
+        .contentMarginsDisabled()
     }
 }
 
@@ -204,19 +205,35 @@ private struct RectangularView: View {
                 Text("Open the app to sign in").font(.caption2)
             }
         } else {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Image(systemName: "clock")
-                    Text("\(Int(entry.snapshot.sessionPct.rounded()))% session")
-                        .font(.headline.monospacedDigit())
-                }
-                if let reset = entry.snapshot.sessionResetsAt {
-                    Text("resets \(reset, style: .relative)")
-                        .font(.caption2)
-                }
-                Text("\(Int(entry.snapshot.weeklyPct.rounded()))% weekly")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                row(percent: entry.snapshot.sessionPct, label: "session")
+                row(percent: entry.snapshot.weeklyPct,  label: "weekly")
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
+
+    private func row(percent: Double, label: String) -> some View {
+        HStack(spacing: 8) {
+            MiniBar(percent: percent)
+                .frame(width: 44, height: 6)
+            Text("\(Int(percent.rounded()))% \(label)")
+                .font(.callout.weight(.medium).monospacedDigit())
+        }
+    }
+}
+
+private struct MiniBar: View {
+    let percent: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(.primary.opacity(0.25))
+                Capsule()
+                    .fill(.primary)
+                    .frame(width: proxy.size.width * CGFloat(min(1, max(0, percent / 100))))
             }
         }
     }
