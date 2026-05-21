@@ -32,9 +32,12 @@ final class UsageViewModel {
 struct UsageView: View {
     let orgId: String
     @Environment(SessionStore.self) private var session
+    @Environment(\.scenePhase) private var scenePhase
     @State private var model: UsageViewModel
     @State private var ticker = Date()
     @AppStorage("notif.enabled") private var notificationsEnabled = false
+
+    private static let refreshInterval: Duration = .seconds(60)
 
     init(orgId: String) {
         self.orgId = orgId
@@ -111,7 +114,15 @@ struct UsageView: View {
                     }
                 }
             }
-            .task { await refresh() }
+            .task(id: scenePhase) {
+                guard scenePhase == .active else { return }
+                await refresh()
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: Self.refreshInterval)
+                    if Task.isCancelled { break }
+                    await refresh()
+                }
+            }
             .refreshable { await refresh() }
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
                 ticker = date
@@ -165,6 +176,14 @@ private func barTint(_ pct: Double) -> Color {
     }
 }
 
+private func fillWidth(percent: Double, in size: CGSize) -> CGFloat {
+    let fraction = CGFloat(min(1, max(0, percent / 100)))
+    guard fraction > 0 else { return 0 }
+    // Match the widget: keep fill ≥ height so the leading edge stays
+    // horizontally rounded instead of flipping vertical.
+    return max(size.height, size.width * fraction)
+}
+
 private struct UsageBar: View {
     let title: String
     let percent: Double
@@ -194,11 +213,11 @@ private struct UsageBar: View {
             }
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6)
+                    Capsule()
                         .fill(.gray.opacity(0.15))
-                    RoundedRectangle(cornerRadius: 6)
+                    Capsule()
                         .fill(barTint(percent))
-                        .frame(width: proxy.size.width * CGFloat(min(1, max(0, percent / 100))))
+                        .frame(width: fillWidth(percent: percent, in: proxy.size))
                         .animation(.easeOut(duration: 0.6), value: percent)
                 }
             }
