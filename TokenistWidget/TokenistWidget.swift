@@ -120,59 +120,30 @@ private struct SmallView: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(Int(entry.snapshot.sessionPct.rounded()))")
-                        .font(.system(size: 38, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .contentTransition(.numericText(value: entry.snapshot.sessionPct))
-                    Text("%")
-                        .font(.headline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-                bar(percent: entry.snapshot.sessionPct, label: "session")
-                bar(percent: entry.snapshot.weeklyPct, label: "weekly")
-                if let reset = entry.snapshot.sessionResetsAt {
-                    HStack(spacing: 3) {
-                        Image(systemName: "clock")
-                            .font(.caption2)
-                        Text(reset, style: .timer)
-                            .font(.caption2.monospacedDigit())
-                    }
-                    .foregroundStyle(.secondary)
-                }
+                metricBlock(title: "Session", percent: entry.snapshot.sessionPct)
+                metricBlock(title: "Weekly",  percent: entry.snapshot.weeklyPct)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 
     @ViewBuilder
-    private func bar(percent: Double, label: String) -> some View {
+    private func metricBlock(title: String, percent: Double) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text(label).font(.caption2).foregroundStyle(.secondary)
-                Spacer()
-                Text("\(Int(percent.rounded()))%")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3).fill(.gray.opacity(0.2))
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(tint(percent))
-                        .frame(width: proxy.size.width * CGFloat(min(1, max(0, percent / 100))))
-                }
-            }
+            Text(title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary.opacity(0.33))
+            Text("\(Int(percent.rounded()))%")
+                .font(.system(size: 30, weight: .medium, design: .rounded))
+                .foregroundStyle(.primary)
+                .contentTransition(.numericText(value: percent))
+            MiniBar(
+                percent: percent,
+                trackColor: Color(.systemGray5),
+                fillColor: .green
+            )
             .frame(height: 5)
-        }
-    }
-
-    private func tint(_ pct: Double) -> Color {
-        switch pct {
-        case ..<50: .green
-        case ..<75: .yellow
-        case ..<90: .orange
-        default: .red
+            .padding(.top, 2)
         }
     }
 }
@@ -225,14 +196,15 @@ private struct RectangularView: View {
 
 private struct MiniBar: View {
     let percent: Double
+    var trackColor: Color = .primary.opacity(0.25)
+    var fillColor: Color = .primary
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
+                Capsule().fill(trackColor)
                 Capsule()
-                    .fill(.primary.opacity(0.25))
-                Capsule()
-                    .fill(.primary)
+                    .fill(fillColor)
                     .frame(width: fillWidth(in: proxy.size))
             }
         }
