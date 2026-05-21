@@ -124,6 +124,7 @@ private struct SmallView: View {
                 metricBlock(title: "Weekly",  percent: entry.snapshot.weeklyPct)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(16)
         }
     }
 
