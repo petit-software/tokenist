@@ -104,6 +104,10 @@ struct UsageView: View {
                             Label("Threshold alerts (75 / 90 / 95%)", systemImage: "bell")
                         }
                         Divider()
+                        Link(destination: URL(string: "https://github.com/petit-software/tokenist")!) {
+                            Label("GitHub", systemImage: "info")
+                        }
+                        Divider()
                         Button(role: .destructive) {
                             session.signOut()
                         } label: {
