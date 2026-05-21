@@ -76,7 +76,9 @@ struct OnboardingView: View {
                                             .foregroundStyle(.tint)
                                     }
                                 }
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                         }
                     } header: {
                         Text("Organization")
