@@ -21,8 +21,11 @@ final class UsageViewModel {
         let client = ClaudeAPIClient(sessionKey: sessionKey)
         do {
             let response = try await client.fetchUsage(orgId: orgId)
-            snapshot = UsageSnapshot(from: response, fetchedAt: now())
+            let fresh = UsageSnapshot(from: response, fetchedAt: now())
+            snapshot = fresh
             lastError = nil
+            SharedSnapshotStore.save(fresh)
+            WidgetCenterBridge.reloadAll()
         } catch {
             lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }

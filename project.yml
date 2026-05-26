@@ -41,6 +41,7 @@ targets:
       - path: Tokenist/Services/ClaudeAPIClient.swift
       - path: Tokenist/Services/KeychainStore.swift
       - path: Tokenist/Services/SharedDefaults.swift
+      - path: Tokenist/Services/SharedSnapshotStore.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bartbak.tokenist.widget

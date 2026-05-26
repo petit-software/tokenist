@@ -55,31 +55,54 @@ struct TokenistTimelineProvider: TimelineProvider {
         completion(TokenistEntry(date: Date(), snapshot: sample, needsSetup: false, errorMessage: nil))
     }
 
+    // How long the widget trusts a cache written by the main app before doing
+    // its own network fetch. The app refreshes every 60s while foregrounded
+    // and calls WidgetCenter.reloadAllTimelines after each success, so anything
+    // newer than this window is almost certainly the same data the user just saw.
+    private static let freshCacheWindow: TimeInterval = 5 * 60
+
+    // Refresh policy budget — iOS treats this as a hint; accessory widgets get a
+    // tighter budget than home-screen ones, so 15 minutes is the floor worth asking for.
+    private static let timelineRefreshInterval: TimeInterval = 15 * 60
+
     func getTimeline(in context: Context, completion: @escaping (Timeline<TokenistEntry>) -> Void) {
         let box = SendableBox(completion)
         Task {
-            let entry = await fetchEntry()
-            let nextRefresh = Date().addingTimeInterval(30 * 60)
+            let entry = await loadEntry()
+            let nextRefresh = Date().addingTimeInterval(Self.timelineRefreshInterval)
             box.value(Timeline(entries: [entry], policy: .after(nextRefresh)))
         }
     }
 
-    private func fetchEntry() async -> TokenistEntry {
-        guard let key = KeychainStore.loadSessionKey(),
+    private func loadEntry() async -> TokenistEntry {
+        guard KeychainStore.loadSessionKey() != nil,
               let orgId = SharedDefaults.orgId,
               !orgId.isEmpty else {
+            return TokenistEntry(date: Date(), snapshot: .empty, needsSetup: true, errorMessage: nil)
+        }
+
+        let cached = SharedSnapshotStore.load()
+
+        // Cache-first: if the main app pushed something recent, render instantly
+        // without burning the widget extension's limited execution time on a network call.
+        if let cached, -cached.fetchedAt.timeIntervalSinceNow < Self.freshCacheWindow {
+            return TokenistEntry(date: Date(), snapshot: cached, needsSetup: false, errorMessage: nil)
+        }
+
+        // Stale or missing cache: try the network, falling back to the stale cache on failure.
+        guard let key = KeychainStore.loadSessionKey() else {
             return TokenistEntry(date: Date(), snapshot: .empty, needsSetup: true, errorMessage: nil)
         }
         do {
             let client = ClaudeAPIClient(sessionKey: key)
             let response = try await client.fetchUsage(orgId: orgId)
-            return TokenistEntry(
-                date: Date(),
-                snapshot: UsageSnapshot(from: response),
-                needsSetup: false,
-                errorMessage: nil
-            )
+            let fresh = UsageSnapshot(from: response)
+            SharedSnapshotStore.save(fresh)
+            return TokenistEntry(date: Date(), snapshot: fresh, needsSetup: false, errorMessage: nil)
         } catch {
+            if let cached {
+                return TokenistEntry(date: Date(), snapshot: cached, needsSetup: false, errorMessage: nil)
+            }
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             return TokenistEntry(date: Date(), snapshot: .empty, needsSetup: false, errorMessage: message)
         }

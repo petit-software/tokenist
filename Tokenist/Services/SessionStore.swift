@@ -31,6 +31,7 @@ final class SessionStore {
     func signOut() {
         KeychainStore.deleteSessionKey()
         SharedDefaults.orgId = nil
+        SharedSnapshotStore.clear()
         phase = .unconfigured
         WidgetCenterBridge.reloadAll()
     }

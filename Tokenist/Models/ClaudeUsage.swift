@@ -58,8 +58,8 @@ struct Organization: Codable, Equatable, Identifiable, Sendable {
     var id: String { uuid }
 }
 
-// Snapshot consumed by the UI.
-struct UsageSnapshot: Equatable, Sendable {
+// Snapshot consumed by the UI and persisted to the App Group for the widget.
+struct UsageSnapshot: Codable, Equatable, Sendable {
     var sessionPct: Double
     var sessionResetsAt: Date?
     var weeklyPct: Double
