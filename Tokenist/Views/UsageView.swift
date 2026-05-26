@@ -104,6 +104,13 @@ struct UsageView: View {
                             Label("Threshold alerts (75 / 90 / 95%)", systemImage: "bell")
                         }
                         Divider()
+                        Button {
+                            if let key = session.currentSessionKey() {
+                                UIPasteboard.general.string = key
+                            }
+                        } label: {
+                            Label("Copy cookie", systemImage: "document.on.document")
+                        }
                         Link(destination: URL(string: "https://github.com/petit-software/tokenist")!) {
                             Label("GitHub", systemImage: "info")
                         }

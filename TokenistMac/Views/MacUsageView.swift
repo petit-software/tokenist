@@ -76,6 +76,15 @@ struct MacUsageView: View {
                         Label("Threshold alerts (75 / 90 / 95%)", systemImage: "bell")
                     }
                     Divider()
+                    Button {
+                        if let key = session.currentSessionKey() {
+                            let pb = NSPasteboard.general
+                            pb.clearContents()
+                            pb.setString(key, forType: .string)
+                        }
+                    } label: {
+                        Label("Copy cookie", systemImage: "document.on.document")
+                    }
                     Link(destination: URL(string: "https://github.com/petit-software/tokenist")!) {
                         Label("GitHub", systemImage: "info")
                     }
