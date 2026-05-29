@@ -35,10 +35,10 @@ struct UsageWindow: Codable, Equatable, Sendable {
 
 struct ExtraUsage: Codable, Equatable, Sendable {
     let isEnabled: Bool
-    let monthlyLimit: Double      // appears to be in cents
-    let usedCredits: Double       // appears to be in cents
+    let monthlyLimit: Double?     // cents, null when extra_usage is disabled
+    let usedCredits: Double?      // cents, null when extra_usage is disabled
     let utilization: Double?      // fraction 0..1, or null
-    let currency: String
+    let currency: String?         // null when extra_usage is disabled
     let disabledReason: String?
 
     enum CodingKeys: String, CodingKey {
@@ -95,8 +95,8 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
         self.sonnetWeeklyPct = response.sevenDaySonnet?.utilization
 
         if let extra = response.extraUsage {
-            self.extraSpending = extra.usedCredits / 100
-            self.extraBudget = extra.monthlyLimit / 100
+            self.extraSpending = extra.usedCredits.map { $0 / 100 }
+            self.extraBudget = extra.monthlyLimit.map { $0 / 100 }
             self.extraCurrency = extra.currency
             self.extraEnabled = extra.isEnabled
         } else {

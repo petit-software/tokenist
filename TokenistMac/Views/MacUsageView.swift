@@ -95,8 +95,10 @@ struct MacUsageView: View {
                         Label("Sign out", systemImage: "key.horizontal")
                     }
                     Divider()
-                    Button("Quit Tokenist") {
+                    Button {
                         NSApplication.shared.terminate(nil)
+                    } label: {
+                        Label("Quit Tokenist", systemImage: "power")
                     }
                 } label: {
                     Image(systemName: "ellipsis")
