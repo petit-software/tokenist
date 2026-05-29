@@ -129,10 +129,13 @@ struct UsageView: View {
         let opus = visibleModelPercent(model.snapshot.opusWeeklyPct)
         let sonnet = visibleModelPercent(model.snapshot.sonnetWeeklyPct)
         let extraUsage = visibleExtraUsage
-        let hasSecondaryMetrics = opus != nil || sonnet != nil || extraUsage != nil
+        let visibleMetricCount = 2
+            + (opus == nil ? 0 : 1)
+            + (sonnet == nil ? 0 : 1)
+            + (extraUsage == nil ? 0 : 1)
 
-        if hasSecondaryMetrics {
-            LazyVGrid(columns: metricColumns, spacing: 12) {
+        if visibleMetricCount <= 3 {
+            VStack(spacing: 12) {
                 sessionBar
                 weeklyBar
                 if let opus {
@@ -150,9 +153,22 @@ struct UsageView: View {
                 }
             }
         } else {
-            VStack(spacing: 12) {
+            LazyVGrid(columns: metricColumns, spacing: 12) {
                 sessionBar
                 weeklyBar
+                if let opus {
+                    UsageBar(title: "Opus", percent: opus, detail: nil)
+                }
+                if let sonnet {
+                    UsageBar(title: "Sonnet", percent: sonnet, detail: nil)
+                }
+                if let extraUsage {
+                    UsageBar(
+                        title: "Extra",
+                        percent: extraUsage.percent,
+                        detail: extraUsage.detail
+                    )
+                }
             }
         }
     }
