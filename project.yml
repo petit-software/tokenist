@@ -24,7 +24,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bartbak.tokenist
         MARKETING_VERSION: "0.12"
-        CURRENT_PROJECT_VERSION: "2"
+        CURRENT_PROJECT_VERSION: "3"
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_ENTITLEMENTS: Tokenist/Tokenist.entitlements
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -46,7 +46,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.bartbak.tokenist.widget
         MARKETING_VERSION: "0.12"
-        CURRENT_PROJECT_VERSION: "2"
+        CURRENT_PROJECT_VERSION: "3"
         INFOPLIST_FILE: TokenistWidget/Info.plist
         CODE_SIGN_ENTITLEMENTS: TokenistWidget/TokenistWidget.entitlements
         SWIFT_STRICT_CONCURRENCY: minimal
@@ -64,7 +64,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.bartbak.tokenist.mac
         PRODUCT_NAME: Tokenist
         MARKETING_VERSION: "0.12"
-        CURRENT_PROJECT_VERSION: "2"
+        CURRENT_PROJECT_VERSION: "3"
         ENABLE_APP_SANDBOX: NO
         ENABLE_HARDENED_RUNTIME: NO
         CODE_SIGN_STYLE: Manual
