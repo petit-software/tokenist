@@ -297,7 +297,6 @@ private struct UsageBar: View {
                     Capsule()
                         .fill(barTint(percent))
                         .frame(width: fillWidth(percent: percent, in: proxy.size))
-                        .animation(.easeOut(duration: 0.6), value: percent)
                 }
             }
             .frame(height: 12)
