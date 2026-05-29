@@ -4,6 +4,7 @@ import SwiftUI
 struct TokenistMacApp: App {
     @State private var session: SessionStore
     @State private var dataStore: MacDataStore
+    @State private var isMenuPresented = false
 
     init() {
         let s = SessionStore()
@@ -21,8 +22,14 @@ struct TokenistMacApp: App {
                 .environment(session)
                 .environment(dataStore)
                 .frame(width: 340)
+                .onAppear { isMenuPresented = true }
+                .onDisappear { isMenuPresented = false }
         } label: {
-            MenuBarLabel(snapshot: dataStore.snapshot, isLoading: dataStore.isLoading)
+            MenuBarLabel(
+                snapshot: dataStore.snapshot,
+                isLoading: dataStore.isLoading,
+                isMenuPresented: isMenuPresented
+            )
         }
         .menuBarExtraStyle(.window)
     }
@@ -31,18 +38,38 @@ struct TokenistMacApp: App {
 private struct MenuBarLabel: View {
     let snapshot: UsageSnapshot
     let isLoading: Bool
+    let isMenuPresented: Bool
 
     var body: some View {
         if snapshot.fetchedAt == .distantPast {
-            Image(systemName: "gauge.medium")
+            MenuBarIcon(size: 24)
         } else {
             HStack(spacing: 4) {
                 MenuBarProgress(percent: snapshot.sessionPct)
                     .frame(width: 42, height: 8)
-                Text("\(Int(snapshot.sessionPct.rounded()))%")
-                    .monospacedDigit()
+                if isMenuPresented {
+                    MenuBarIcon(size: 20)
+                } else {
+                    Text("\(Int(snapshot.sessionPct.rounded()))%")
+                        .monospacedDigit()
+                }
             }
         }
+    }
+}
+
+private struct MenuBarIcon: View {
+    let size: CGFloat
+
+    var body: some View {
+        Image("TokenistBarIcon")
+            .renderingMode(.template)
+            .resizable()
+            .aspectRatio(1, contentMode: .fit)
+            .frame(width: size, height: size)
+            .fixedSize()
+            .clipped()
+            .accessibilityLabel("Tokenist")
     }
 }
 

@@ -50,33 +50,8 @@ struct UsageView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-                Grid(horizontalSpacing: 12, verticalSpacing: 12) {
-                    GridRow {
-                        UsageBar(
-                            title: "Session",
-                            percent: model.snapshot.sessionPct,
-                            detail: resetText(model.snapshot.sessionResetsAt)
-                        )
-                        UsageBar(
-                            title: "Weekly",
-                            percent: model.snapshot.weeklyPct,
-                            detail: resetText(model.snapshot.weeklyResetsAt)
-                        )
-                    }
-                    GridRow {
-                        UsageBar(
-                            title: "Opus",
-                            percent: model.snapshot.opusWeeklyPct ?? 0,
-                            detail: model.snapshot.opusWeeklyPct == nil ? "—" : nil
-                        )
-                        UsageBar(
-                            title: "Sonnet",
-                            percent: model.snapshot.sonnetWeeklyPct ?? 0,
-                            detail: model.snapshot.sonnetWeeklyPct == nil ? "—" : nil
-                        )
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                usageMetrics
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 if let err = model.lastError {
                     Label(err, systemImage: "exclamationmark.triangle.fill")
@@ -147,6 +122,81 @@ struct UsageView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var usageMetrics: some View {
+        let opus = visibleModelPercent(model.snapshot.opusWeeklyPct)
+        let sonnet = visibleModelPercent(model.snapshot.sonnetWeeklyPct)
+        let extraUsage = visibleExtraUsage
+        let hasSecondaryMetrics = opus != nil || sonnet != nil || extraUsage != nil
+
+        if hasSecondaryMetrics {
+            LazyVGrid(columns: metricColumns, spacing: 12) {
+                sessionBar
+                weeklyBar
+                if let opus {
+                    UsageBar(title: "Opus", percent: opus, detail: nil)
+                }
+                if let sonnet {
+                    UsageBar(title: "Sonnet", percent: sonnet, detail: nil)
+                }
+                if let extraUsage {
+                    UsageBar(
+                        title: "Extra",
+                        percent: extraUsage.percent,
+                        detail: extraUsage.detail
+                    )
+                }
+            }
+        } else {
+            VStack(spacing: 12) {
+                sessionBar
+                weeklyBar
+            }
+        }
+    }
+
+    private var metricColumns: [GridItem] {
+        [
+            GridItem(.flexible(), spacing: 12),
+            GridItem(.flexible(), spacing: 12)
+        ]
+    }
+
+    private var sessionBar: some View {
+        UsageBar(
+            title: "Session",
+            percent: model.snapshot.sessionPct,
+            detail: resetText(model.snapshot.sessionResetsAt)
+        )
+    }
+
+    private var weeklyBar: some View {
+        UsageBar(
+            title: "Weekly",
+            percent: model.snapshot.weeklyPct,
+            detail: resetText(model.snapshot.weeklyResetsAt)
+        )
+    }
+
+    private var visibleExtraUsage: (percent: Double, detail: String)? {
+        guard model.snapshot.extraEnabled,
+              let spending = model.snapshot.extraSpending,
+              let budget = model.snapshot.extraBudget,
+              budget > 0 else { return nil }
+
+        let detail = currencyDetail(
+            spending: spending,
+            budget: budget,
+            currency: model.snapshot.extraCurrency ?? "USD"
+        )
+        return (spending / budget * 100, detail)
+    }
+
+    private func visibleModelPercent(_ percent: Double?) -> Double? {
+        guard let percent, percent > 0 else { return nil }
+        return percent
     }
 
     private func refresh() async {

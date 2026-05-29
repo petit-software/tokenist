@@ -34,10 +34,10 @@ struct MacUsageView: View {
                 percent: dataStore.snapshot.weeklyPct,
                 resetText: resetText(dataStore.snapshot.weeklyResetsAt)
             )
-            if let opus = dataStore.snapshot.opusWeeklyPct {
+            if let opus = visibleModelPercent(dataStore.snapshot.opusWeeklyPct) {
                 UsageRow(title: "Opus weekly", percent: opus, resetText: nil)
             }
-            if let sonnet = dataStore.snapshot.sonnetWeeklyPct {
+            if let sonnet = visibleModelPercent(dataStore.snapshot.sonnetWeeklyPct) {
                 UsageRow(title: "Sonnet weekly", percent: sonnet, resetText: nil)
             }
 
@@ -137,6 +137,11 @@ struct MacUsageView: View {
         let spent = formatter.string(from: spending as NSNumber) ?? "\(spending)"
         let cap = formatter.string(from: budget as NSNumber) ?? "\(budget)"
         return "\(spent) of \(cap)"
+    }
+
+    private func visibleModelPercent(_ percent: Double?) -> Double? {
+        guard let percent, percent > 0 else { return nil }
+        return percent
     }
 }
 
