@@ -10,8 +10,13 @@ final class UsageViewModel {
     private let orgId: String
     private let now: @Sendable () -> Date
 
-    init(orgId: String, now: @escaping @Sendable () -> Date = Date.init) {
+    init(
+        orgId: String,
+        snapshot: UsageSnapshot = .empty,
+        now: @escaping @Sendable () -> Date = Date.init
+    ) {
         self.orgId = orgId
+        self.snapshot = snapshot
         self.now = now
     }
 
@@ -26,6 +31,9 @@ final class UsageViewModel {
             lastError = nil
             SharedSnapshotStore.save(fresh)
             WidgetCenterBridge.reloadAll()
+        } catch ClaudeAPIClient.APIError.cancelled {
+            // SwiftUI can cancel a refresh when its task is replaced or the view changes.
+            // This is expected lifecycle control, not a user-facing failure.
         } catch {
             lastError = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
@@ -34,24 +42,32 @@ final class UsageViewModel {
 
 struct UsageView: View {
     let orgId: String
+    private let refreshEnabled: Bool
     @Environment(SessionStore.self) private var session
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: UsageViewModel
     @State private var ticker = Date()
     @AppStorage("notif.enabled") private var notificationsEnabled = false
+    @AppStorage("usage.showRemaining") private var showRemainingUsage = false
 
     private static let refreshInterval: Duration = .seconds(60)
 
-    init(orgId: String) {
+    init(
+        orgId: String,
+        initialSnapshot: UsageSnapshot = .empty,
+        refreshEnabled: Bool = true
+    ) {
         self.orgId = orgId
-        _model = State(initialValue: UsageViewModel(orgId: orgId))
+        self.refreshEnabled = refreshEnabled
+        _model = State(
+            initialValue: UsageViewModel(orgId: orgId, snapshot: initialSnapshot)
+        )
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
+            ScrollView {
                 usageMetrics
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 if let err = model.lastError {
                     Label(err, systemImage: "exclamationmark.triangle.fill")
@@ -61,7 +77,11 @@ struct UsageView: View {
                         .background(.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
                 }
             }
-            .padding()
+            .contentMargins(.horizontal, 16, for: .scrollContent)
+            .contentMargins(.top, 16, for: .scrollContent)
+            .contentMargins(.bottom, 24, for: .scrollContent)
+            .scrollIndicators(.hidden)
+            .refreshable { await refresh() }
             .navigationTitle("Tokenist")
             .navigationSubtitle("Last updated \(model.snapshot.fetchedAt.formatted(.relative(presentation: .named)))")
             .toolbar {
@@ -78,6 +98,9 @@ struct UsageView: View {
                 }
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
+                        Toggle(isOn: $showRemainingUsage) {
+                            Label("Show remaining usage", systemImage: "gauge.with.dots.needle.33percent")
+                        }
                         Toggle(isOn: $notificationsEnabled) {
                             Label("Threshold alerts (75 / 90 / 95%)", systemImage: "bell")
                         }
@@ -112,7 +135,6 @@ struct UsageView: View {
                     await refresh()
                 }
             }
-            .refreshable { await refresh() }
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { date in
                 ticker = date
             }
@@ -124,50 +146,58 @@ struct UsageView: View {
         }
     }
 
-    @ViewBuilder
     private var usageMetrics: some View {
         let opus = visibleModelPercent(model.snapshot.opusWeeklyPct)
         let sonnet = visibleModelPercent(model.snapshot.sonnetWeeklyPct)
         let extraUsage = visibleExtraUsage
-        let visibleMetricCount = 2
-            + (opus == nil ? 0 : 1)
-            + (sonnet == nil ? 0 : 1)
-            + (extraUsage == nil ? 0 : 1)
 
-        if visibleMetricCount <= 3 {
-            VStack(spacing: 12) {
-                sessionBar
-                weeklyBar
-                if let opus {
-                    UsageBar(title: "Opus", percent: opus, detail: nil)
-                }
-                if let sonnet {
-                    UsageBar(title: "Sonnet", percent: sonnet, detail: nil)
-                }
-                if let extraUsage {
-                    UsageBar(
-                        title: "Extra",
-                        percent: extraUsage.percent,
-                        detail: extraUsage.detail
-                    )
-                }
-            }
-        } else {
-            LazyVGrid(columns: metricColumns, spacing: 12) {
-                sessionBar
-                weeklyBar
-                if let opus {
-                    UsageBar(title: "Opus", percent: opus, detail: nil)
-                }
-                if let sonnet {
-                    UsageBar(title: "Sonnet", percent: sonnet, detail: nil)
-                }
-                if let extraUsage {
-                    UsageBar(
-                        title: "Extra",
-                        percent: extraUsage.percent,
-                        detail: extraUsage.detail
-                    )
+        return LazyVStack(spacing: 12) {
+            sessionBar
+                .containerRelativeFrame(.vertical, count: 3, span: 1, spacing: 12)
+                .frame(minHeight: 180)
+
+            WeeklyUsageCard(
+                allModelsPercent: displayedPercent(model.snapshot.weeklyPct),
+                allModelsDetail: resetText(model.snapshot.weeklyResetsAt),
+                fablePercent: model.snapshot.fableWeeklyPct.map(displayedPercent),
+                fableDetail: resetText(model.snapshot.fableWeeklyResetsAt),
+                showsRemaining: showRemainingUsage
+            )
+            .containerRelativeFrame(.vertical, count: 3, span: 2, spacing: 12)
+            .frame(minHeight: 320)
+
+            if opus != nil || sonnet != nil || extraUsage != nil {
+                LazyVGrid(columns: metricColumns, spacing: 12) {
+                    if let opus {
+                        UsageBar(
+                            title: metricTitle("Opus"),
+                            percent: displayedPercent(opus),
+                            detail: nil,
+                            showsRemaining: showRemainingUsage
+                        )
+                        .containerRelativeFrame(.vertical, count: 3, span: 1, spacing: 12)
+                        .frame(minHeight: 180)
+                    }
+                    if let sonnet {
+                        UsageBar(
+                            title: metricTitle("Sonnet"),
+                            percent: displayedPercent(sonnet),
+                            detail: nil,
+                            showsRemaining: showRemainingUsage
+                        )
+                        .containerRelativeFrame(.vertical, count: 3, span: 1, spacing: 12)
+                        .frame(minHeight: 180)
+                    }
+                    if let extraUsage {
+                        UsageBar(
+                            title: showRemainingUsage ? "Extra budget left" : "Extra",
+                            percent: displayedPercent(extraUsage.percent),
+                            detail: extraUsage.detail,
+                            showsRemaining: showRemainingUsage
+                        )
+                        .containerRelativeFrame(.vertical, count: 3, span: 1, spacing: 12)
+                        .frame(minHeight: 180)
+                    }
                 }
             }
         }
@@ -182,17 +212,10 @@ struct UsageView: View {
 
     private var sessionBar: some View {
         UsageBar(
-            title: "Session",
-            percent: model.snapshot.sessionPct,
-            detail: resetText(model.snapshot.sessionResetsAt)
-        )
-    }
-
-    private var weeklyBar: some View {
-        UsageBar(
-            title: "Weekly",
-            percent: model.snapshot.weeklyPct,
-            detail: resetText(model.snapshot.weeklyResetsAt)
+            title: metricTitle("Session"),
+            percent: displayedPercent(model.snapshot.sessionPct),
+            detail: resetText(model.snapshot.sessionResetsAt),
+            showsRemaining: showRemainingUsage
         )
     }
 
@@ -215,7 +238,17 @@ struct UsageView: View {
         return percent
     }
 
+    private func displayedPercent(_ usedPercent: Double) -> Double {
+        guard showRemainingUsage else { return usedPercent }
+        return min(100, max(0, 100 - usedPercent))
+    }
+
+    private func metricTitle(_ title: String) -> String {
+        showRemainingUsage ? "\(title) left" : title
+    }
+
     private func refresh() async {
+        guard refreshEnabled else { return }
         guard let key = session.currentSessionKey() else {
             session.signOut()
             return
@@ -264,10 +297,101 @@ private func fillWidth(percent: Double, in size: CGSize) -> CGFloat {
     return max(size.height, size.width * fraction)
 }
 
+private struct WeeklyUsageCard: View {
+    let allModelsPercent: Double
+    let allModelsDetail: String?
+    let fablePercent: Double?
+    let fableDetail: String?
+    let showsRemaining: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(showsRemaining ? "Weekly left" : "Weekly")
+                .font(.headline)
+
+            VStack(spacing: 16) {
+                if let fablePercent {
+                    WeeklyMetric(
+                        title: showsRemaining ? "Fable left" : "Fable",
+                        percent: fablePercent,
+                        detail: fableDetail,
+                        showsRemaining: showsRemaining
+                    )
+
+                    Divider()
+                }
+
+                WeeklyMetric(
+                    title: showsRemaining ? "All models left" : "All models",
+                    percent: allModelsPercent,
+                    detail: allModelsDetail,
+                    showsRemaining: showsRemaining
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding()
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(.primary.opacity(0.2), lineWidth: 0.5)
+        }
+    }
+}
+
+private struct WeeklyMetric: View {
+    let title: String
+    let percent: Double
+    let detail: String?
+    let showsRemaining: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Spacer(minLength: 0)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(Int(percent.rounded()))")
+                    .font(.system(size: 48, weight: .semibold, design: .rounded))
+                    .contentTransition(.numericText(value: percent))
+                    .animation(.smooth(duration: 0.6), value: percent)
+                Text("%")
+                    .font(.headline.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(.regularMaterial)
+                    Capsule()
+                        .fill(barTint(showsRemaining ? 100 - percent : percent))
+                        .frame(width: fillWidth(percent: percent, in: proxy.size))
+                }
+            }
+            .frame(height: 12)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 private struct UsageBar: View {
     let title: String
     let percent: Double
     let detail: String?
+    let showsRemaining: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -293,9 +417,9 @@ private struct UsageBar: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(.gray.opacity(0.15))
+                        .fill(.white)
                     Capsule()
-                        .fill(barTint(percent))
+                        .fill(barTint(showsRemaining ? 100 - percent : percent))
                         .frame(width: fillWidth(percent: percent, in: proxy.size))
                 }
             }
@@ -305,4 +429,53 @@ private struct UsageBar: View {
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
     }
+}
+
+private extension UsageSnapshot {
+    static func preview(
+        session: Double,
+        weekly: Double,
+        fable: Double
+    ) -> UsageSnapshot {
+        UsageSnapshot(
+            sessionPct: session,
+            sessionResetsAt: .now.addingTimeInterval(2 * 60 * 60),
+            weeklyPct: weekly,
+            weeklyResetsAt: .now.addingTimeInterval(3 * 24 * 60 * 60),
+            fableWeeklyPct: fable,
+            fableWeeklyResetsAt: .now.addingTimeInterval(3 * 24 * 60 * 60),
+            opusWeeklyPct: nil,
+            sonnetWeeklyPct: nil,
+            extraSpending: nil,
+            extraBudget: nil,
+            extraCurrency: nil,
+            extraEnabled: false,
+            fetchedAt: .now
+        )
+    }
+}
+
+private struct UsagePreview: View {
+    let snapshot: UsageSnapshot
+
+    var body: some View {
+        UsageView(
+            orgId: "preview",
+            initialSnapshot: snapshot,
+            refreshEnabled: false
+        )
+        .environment(SessionStore())
+    }
+}
+
+#Preview("Minimal usage") {
+    UsagePreview(snapshot: .preview(session: 5, weekly: 10, fable: 3))
+}
+
+#Preview("Mid-range usage") {
+    UsagePreview(snapshot: .preview(session: 42, weekly: 58, fable: 31))
+}
+
+#Preview("Maxed usage") {
+    UsagePreview(snapshot: .preview(session: 100, weekly: 100, fable: 100))
 }

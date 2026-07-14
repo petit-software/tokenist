@@ -12,6 +12,8 @@ struct UsageResponse: Codable, Equatable, Sendable {
     let sevenDay: UsageWindow?
     let sevenDayOpus: UsageWindow?
     let sevenDaySonnet: UsageWindow?
+    let sevenDayFable: UsageWindow?
+    let limits: [UsageLimit]?
     let extraUsage: ExtraUsage?
 
     enum CodingKeys: String, CodingKey {
@@ -19,7 +21,53 @@ struct UsageResponse: Codable, Equatable, Sendable {
         case sevenDay = "seven_day"
         case sevenDayOpus = "seven_day_opus"
         case sevenDaySonnet = "seven_day_sonnet"
+        case sevenDayFable = "seven_day_fable"
+        case limits
         case extraUsage = "extra_usage"
+    }
+
+    var fableWeekly: UsageWindow? {
+        let fableLimits: [UsageLimit] = (limits ?? []).filter {
+            $0.kind == "weekly_scoped"
+                && $0.scope?.model?.displayName?.localizedCaseInsensitiveContains("fable") == true
+                && $0.percent != nil
+        }
+        let activeLimit = fableLimits.first { $0.isActive == true }
+        let highestLimit = fableLimits.max { lhs, rhs in
+            (lhs.percent ?? 0) < (rhs.percent ?? 0)
+        }
+        let selected = activeLimit ?? highestLimit
+
+        if let selected, let percent = selected.percent {
+            return UsageWindow(utilization: percent, resetsAt: selected.resetsAt)
+        }
+        return sevenDayFable
+    }
+}
+
+struct UsageLimit: Codable, Equatable, Sendable {
+    let kind: String
+    let percent: Double?
+    let resetsAt: Date?
+    let scope: UsageLimitScope?
+    let isActive: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case kind, percent, scope
+        case resetsAt = "resets_at"
+        case isActive = "is_active"
+    }
+}
+
+struct UsageLimitScope: Codable, Equatable, Sendable {
+    let model: UsageLimitModel?
+}
+
+struct UsageLimitModel: Codable, Equatable, Sendable {
+    let displayName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case displayName = "display_name"
     }
 }
 
@@ -64,6 +112,8 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
     var sessionResetsAt: Date?
     var weeklyPct: Double
     var weeklyResetsAt: Date?
+    var fableWeeklyPct: Double?
+    var fableWeeklyResetsAt: Date?
     var opusWeeklyPct: Double?
     var sonnetWeeklyPct: Double?
     var extraSpending: Double?    // dollars
@@ -77,6 +127,8 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
         sessionResetsAt: nil,
         weeklyPct: 0,
         weeklyResetsAt: nil,
+        fableWeeklyPct: nil,
+        fableWeeklyResetsAt: nil,
         opusWeeklyPct: nil,
         sonnetWeeklyPct: nil,
         extraSpending: nil,
@@ -91,6 +143,8 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
         self.sessionResetsAt = response.fiveHour?.resetsAt
         self.weeklyPct = response.sevenDay?.utilization ?? 0
         self.weeklyResetsAt = response.sevenDay?.resetsAt
+        self.fableWeeklyPct = response.fableWeekly?.utilization
+        self.fableWeeklyResetsAt = response.fableWeekly?.resetsAt
         self.opusWeeklyPct = response.sevenDayOpus?.utilization
         self.sonnetWeeklyPct = response.sevenDaySonnet?.utilization
 
@@ -114,6 +168,8 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
         sessionResetsAt: Date?,
         weeklyPct: Double,
         weeklyResetsAt: Date?,
+        fableWeeklyPct: Double? = nil,
+        fableWeeklyResetsAt: Date? = nil,
         opusWeeklyPct: Double?,
         sonnetWeeklyPct: Double?,
         extraSpending: Double?,
@@ -126,6 +182,8 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
         self.sessionResetsAt = sessionResetsAt
         self.weeklyPct = weeklyPct
         self.weeklyResetsAt = weeklyResetsAt
+        self.fableWeeklyPct = fableWeeklyPct
+        self.fableWeeklyResetsAt = fableWeeklyResetsAt
         self.opusWeeklyPct = opusWeeklyPct
         self.sonnetWeeklyPct = sonnetWeeklyPct
         self.extraSpending = extraSpending

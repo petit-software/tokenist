@@ -3,7 +3,7 @@
 <img width="7264" height="3736" alt="image" src="https://github.com/user-attachments/assets/bbebc03f-6282-4636-b84d-75199d21540c" />
 
 
-iOS + macOS app that shows your Claude.ai usage at a glance — 5-hour session %, weekly %, Opus/Sonnet weekly, extra spending. Includes a Lock Screen widget, Home Screen widget, and a Mac menu-bar tray app.
+iOS + macOS app that shows your Claude.ai usage at a glance — 5-hour session %, weekly %, Fable/Opus/Sonnet weekly, extra spending. Includes a Lock Screen widget, Home Screen widget, and a Mac menu-bar tray app.
 
 Personal use only. The data source is an undocumented Claude.ai endpoint that would fail App Store review. Build from source, run on your own devices.
 

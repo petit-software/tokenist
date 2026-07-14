@@ -9,12 +9,13 @@ final class NotificationManager {
     static let shared = NotificationManager()
 
     enum Metric: String, CaseIterable {
-        case session, weekly, opus, sonnet
+        case session, weekly, fable, opus, sonnet
 
         var title: String {
             switch self {
             case .session: "5-hour session"
             case .weekly:  "Weekly usage"
+            case .fable:   "Fable weekly"
             case .opus:    "Opus weekly"
             case .sonnet:  "Sonnet weekly"
             }
@@ -43,6 +44,9 @@ final class NotificationManager {
 
         check(.session, percent: snapshot.sessionPct, resetsAt: snapshot.sessionResetsAt)
         check(.weekly,  percent: snapshot.weeklyPct,  resetsAt: snapshot.weeklyResetsAt)
+        if let pct = snapshot.fableWeeklyPct {
+            check(.fable, percent: pct, resetsAt: snapshot.fableWeeklyResetsAt)
+        }
         if let pct = snapshot.opusWeeklyPct {
             check(.opus,   percent: pct, resetsAt: snapshot.weeklyResetsAt)
         }

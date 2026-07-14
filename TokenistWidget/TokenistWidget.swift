@@ -44,6 +44,8 @@ struct TokenistTimelineProvider: TimelineProvider {
             sessionResetsAt: Date().addingTimeInterval(60 * 60 * 2),
             weeklyPct: 23,
             weeklyResetsAt: Date().addingTimeInterval(60 * 60 * 24 * 3),
+            fableWeeklyPct: 31,
+            fableWeeklyResetsAt: Date().addingTimeInterval(60 * 60 * 24 * 3),
             opusWeeklyPct: nil,
             sonnetWeeklyPct: 10,
             extraSpending: nil,
@@ -142,9 +144,19 @@ private struct SmallView: View {
                     .foregroundStyle(.secondary)
             }
         } else {
-            VStack(alignment: .leading, spacing: 10) {
-                metricBlock(title: "Session", percent: entry.snapshot.sessionPct)
-                metricBlock(title: "Weekly",  percent: entry.snapshot.weeklyPct)
+            Group {
+                if let fable = entry.snapshot.fableWeeklyPct {
+                    VStack(alignment: .leading, spacing: 8) {
+                        compactMetricBlock(title: "Session", percent: entry.snapshot.sessionPct)
+                        compactMetricBlock(title: "Weekly", percent: entry.snapshot.weeklyPct)
+                        compactMetricBlock(title: "Fable", percent: fable)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        metricBlock(title: "Session", percent: entry.snapshot.sessionPct)
+                        metricBlock(title: "Weekly", percent: entry.snapshot.weeklyPct)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(16)
@@ -168,6 +180,22 @@ private struct SmallView: View {
             )
             .frame(height: 5)
             .padding(.top, 2)
+        }
+    }
+
+    private func compactMetricBlock(title: String, percent: Double) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary.opacity(0.4))
+                Spacer()
+                Text("\(Int(percent.rounded()))%")
+                    .font(.system(size: 17, weight: .medium, design: .rounded))
+                    .contentTransition(.numericText(value: percent))
+            }
+            MiniBar(percent: percent, trackColor: Color(.systemGray5), fillColor: .green)
+                .frame(height: 5)
         }
     }
 }
@@ -200,20 +228,30 @@ private struct RectangularView: View {
                 Text("Open the app to sign in").font(.caption2)
             }
         } else {
-            VStack(alignment: .leading, spacing: 6) {
-                row(percent: entry.snapshot.sessionPct, label: "session")
-                row(percent: entry.snapshot.weeklyPct,  label: "weekly")
+            Group {
+                if let fable = entry.snapshot.fableWeeklyPct {
+                    VStack(alignment: .leading, spacing: 2) {
+                        row(percent: entry.snapshot.sessionPct, label: "session", compact: true)
+                        row(percent: entry.snapshot.weeklyPct, label: "weekly", compact: true)
+                        row(percent: fable, label: "Fable", compact: true)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        row(percent: entry.snapshot.sessionPct, label: "session")
+                        row(percent: entry.snapshot.weeklyPct, label: "weekly")
+                    }
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 
-    private func row(percent: Double, label: String) -> some View {
+    private func row(percent: Double, label: String, compact: Bool = false) -> some View {
         HStack(spacing: 8) {
             MiniBar(percent: percent)
-                .frame(width: 44, height: 6)
+                .frame(width: compact ? 36 : 44, height: compact ? 5 : 6)
             Text("\(Int(percent.rounded()))% \(label)")
-                .font(.callout.weight(.medium).monospacedDigit())
+                .font((compact ? Font.caption : Font.callout).weight(.medium).monospacedDigit())
         }
     }
 }
@@ -253,6 +291,8 @@ private struct MiniBar: View {
             sessionResetsAt: .now.addingTimeInterval(7000),
             weeklyPct: 23,
             weeklyResetsAt: .now.addingTimeInterval(86400 * 3),
+            fableWeeklyPct: 31,
+            fableWeeklyResetsAt: .now.addingTimeInterval(86400 * 3),
             opusWeeklyPct: nil,
             sonnetWeeklyPct: 10,
             extraSpending: nil,

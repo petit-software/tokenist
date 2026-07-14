@@ -34,6 +34,13 @@ struct MacUsageView: View {
                 percent: dataStore.snapshot.weeklyPct,
                 resetText: resetText(dataStore.snapshot.weeklyResetsAt)
             )
+            if let fable = dataStore.snapshot.fableWeeklyPct {
+                UsageRow(
+                    title: "Fable weekly",
+                    percent: fable,
+                    resetText: resetText(dataStore.snapshot.fableWeeklyResetsAt)
+                )
+            }
             if let opus = visibleModelPercent(dataStore.snapshot.opusWeeklyPct) {
                 UsageRow(title: "Opus weekly", percent: opus, resetText: nil)
             }

@@ -5,6 +5,7 @@ private let log = Logger(subsystem: "com.tokenist.Tokenist", category: "api")
 
 struct ClaudeAPIClient: Sendable {
     enum APIError: Error, LocalizedError {
+        case cancelled
         case unauthorized
         case http(Int, String?)
         case decoding(Error)
@@ -12,6 +13,7 @@ struct ClaudeAPIClient: Sendable {
 
         var errorDescription: String? {
             switch self {
+            case .cancelled: "Refresh cancelled before completion."
             case .unauthorized: "Session cookie is invalid or expired."
             case .http(let code, let body):
                 "HTTP \(code)\(body.map { ": \($0)" } ?? "")"
@@ -49,6 +51,10 @@ struct ClaudeAPIClient: Sendable {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await urlSession.data(for: req)
+        } catch is CancellationError {
+            throw APIError.cancelled
+        } catch let error as URLError where error.code == .cancelled {
+            throw APIError.cancelled
         } catch {
             throw APIError.network(error)
         }

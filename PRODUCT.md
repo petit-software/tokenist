@@ -1,7 +1,7 @@
 # Tokenist
 
 ## Product purpose
-Personal-use iOS + macOS app that shows Claude.ai subscription usage at a glance — 5-hour session %, weekly all-models %, Opus / Sonnet weekly sub-caps, and extra spending. Built for developers heavy on Claude Code / claude.ai who want to know when they're about to hit limits without opening the website.
+Personal-use iOS + macOS app that shows Claude.ai subscription usage at a glance — 5-hour session %, weekly all-models %, Fable / Opus / Sonnet weekly sub-caps, and extra spending. Built for developers heavy on Claude Code / claude.ai who want to know when they're about to hit limits without opening the website.
 
 ## Register
 product
