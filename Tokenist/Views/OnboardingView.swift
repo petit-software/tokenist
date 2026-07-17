@@ -260,24 +260,17 @@ private struct StepRow: View {
 
 private struct AppIconView: View {
     var body: some View {
-        if let image = Self.bundleIcon {
-            Image(uiImage: image)
-                .resizable()
-                .interpolation(.high)
-                .frame(width: 96, height: 96)
-                .clipShape(.rect(cornerRadius: 22, style: .continuous))
-                .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-                .padding(.vertical, 12)
-        }
+        Image("OnboardingIcon")
+            .resizable()
+            .interpolation(.high)
+            .frame(width: 96, height: 96)
+            .clipShape(.rect(cornerRadius: 22, style: .continuous))
+            .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+            .padding(.vertical, 12)
     }
+}
 
-    private static var bundleIcon: UIImage? {
-        guard
-            let icons = Bundle.main.object(forInfoDictionaryKey: "CFBundleIcons") as? [String: Any],
-            let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
-            let files = primary["CFBundleIconFiles"] as? [String],
-            let lastName = files.last
-        else { return nil }
-        return UIImage(named: lastName)
-    }
+#Preview("Onboarding") {
+    OnboardingView()
+        .environment(SessionStore())
 }

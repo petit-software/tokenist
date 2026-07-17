@@ -47,6 +47,7 @@ struct UsageView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var model: UsageViewModel
     @State private var ticker = Date()
+    @State private var showsAbout = false
     @AppStorage("notif.enabled") private var notificationsEnabled = false
     @AppStorage("usage.showRemaining") private var showRemainingUsage = false
 
@@ -112,8 +113,10 @@ struct UsageView: View {
                         } label: {
                             Label("Copy cookie", systemImage: "document.on.document")
                         }
-                        Link(destination: URL(string: "https://github.com/petit-software/tokenist")!) {
-                            Label("GitHub", systemImage: "info")
+                        Button {
+                            showsAbout = true
+                        } label: {
+                            Label("About", systemImage: "info.circle")
                         }
                         Divider()
                         Button(role: .destructive) {
@@ -125,6 +128,9 @@ struct UsageView: View {
                         Image(systemName: "ellipsis")
                     }
                 }
+            }
+            .sheet(isPresented: $showsAbout) {
+                AboutSheet()
             }
             .task(id: scenePhase) {
                 guard scenePhase == .active else { return }
@@ -278,6 +284,58 @@ struct UsageView: View {
     }
 }
 
+private struct AboutSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            GeometryReader { proxy in
+                ScrollView {
+                    ZStack {
+                        Link(destination: URL(string: "https://petit.software")!) {
+                            Image("PetitLabel")
+                                .resizable()
+                                .scaledToFit()
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: 280)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Visit Petit Software")
+
+                        Text("If you find this app useful, please share it with your friends as a sign of gratitude. – Your friends @ Petit")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.bottom, 22)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: max(0, proxy.size.height - 40), alignment: .center)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                    }
+                    .accessibilityLabel("Close")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Link(destination: URL(string: "https://github.com/petit-software/tokenist")!) {
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .accessibilityLabel("GitHub")
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Single shared card
 
 private func barTint(_ pct: Double) -> Color {
@@ -417,7 +475,7 @@ private struct UsageBar: View {
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(.white)
+                        .fill(Color(uiColor: .systemBackground))
                     Capsule()
                         .fill(barTint(showsRemaining ? 100 - percent : percent))
                         .frame(width: fillWidth(percent: percent, in: proxy.size))
